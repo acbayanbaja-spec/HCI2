@@ -393,6 +393,8 @@ CSRF at once.
 | `Migration 000X changed after it was applied` | An applied file was edited. Revert it and add a new migration. |
 | `COOKIE_SAME_SITE=none requires COOKIE_SECURE=true` | Browsers reject that combination; set `COOKIE_SECURE=true`. |
 | `CORS_ORIGINS contains a development URL` | Production refuses localhost origins; list the real HTTPS origin. |
+| `Invalid environment configuration ... expected string, received undefined` | A required variable is missing from the deployment. Schema checks run **before** the production cross-field checks, so this crash hides the rest - fill the whole set at once. |
+| `APP_CLIENT_URL still looks like a placeholder value` | `REPLACE-WITH-…` was copied verbatim from `render.yaml`; use the real Vercel origin. |
 | `SMTP_HOST is required in production` | Password resets would be silently swallowed; configure mail. |
 | `<KEY> still looks like a placeholder value` | A template value survived into the environment; set the real one. |
 | Sign-in works locally but not on the deployment | `CORS_ORIGINS` mismatch, `COOKIE_DOMAIN` set, or `VITE_API_BASE_URL` changed without redeploying. |
