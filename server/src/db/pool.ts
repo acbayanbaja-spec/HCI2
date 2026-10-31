@@ -1,7 +1,33 @@
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg'
 import { env } from '../config/env'
 import { logger } from '../lib/logger'
+
+const PEM_MARKER = '-----BEGIN CERTIFICATE-----'
+
+// A path is accepted as well as the PEM text because pasting a 23-line
+// certificate into a hosting dashboard is where deployments keep failing.
+// Relative paths are tried from the working directory, this package and the
+// repository root, because npm runs workspace scripts with the package as cwd.
+function loadRootCert(value: string): { pem?: string; source: string } {
+  if (value.includes(PEM_MARKER)) return { pem: value, source: 'PGSSL_ROOT_CERT value' }
+  const candidates = [
+    path.resolve(value),
+    path.resolve(__dirname, '..', '..', value),
+    path.resolve(__dirname, '..', '..', '..', value),
+  ]
+  for (const candidate of candidates) {
+    try {
+      const contents = fs.readFileSync(candidate, 'utf8')
+      return contents.includes(PEM_MARKER) ? { pem: contents, source: candidate } : { source: `${candidate} has no PEM` }
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return { source: `${candidates.join(' and ')} could not be read` }
+}
 
 function buildSsl() {
   if (!env.database.ssl) return undefined
@@ -12,27 +38,33 @@ function buildSsl() {
     return { rejectUnauthorized: false }
   }
 
-  const pem = process.env.PGSSL_ROOT_CERT ?? ''
-  const certificates = (pem.match(/-----BEGIN CERTIFICATE-----/g) ?? []).length
-  if (pem !== '' && certificates === 0) {
-    logger.error(
-      'PGSSL_ROOT_CERT is set but holds no PEM certificate, so verification will fall back to the system trust store. It must contain the certificate text, not a file path.',
-      { firstCharacters: pem.slice(0, 24) },
-    )
-  } else if (certificates > 0) {
-    try {
-      logger.info('Verifying the database certificate against a supplied CA', {
-        certificates,
-        subject: new crypto.X509Certificate(pem).subject.replace(/\n/g, ', '),
-      })
-    } catch {
-      logger.error('PGSSL_ROOT_CERT contains a PEM block that could not be parsed.', { certificates })
-    }
-  } else {
+  const configured = process.env.PGSSL_ROOT_CERT ?? ''
+  if (configured === '') {
     logger.info('PGSSL is on with no PGSSL_ROOT_CERT, so the database CA must be in the system trust store.')
+    return { rejectUnauthorized: true }
   }
 
-  return { rejectUnauthorized: true, ca: pem || undefined }
+  const { pem, source } = loadRootCert(configured)
+  if (!pem) {
+    logger.error('PGSSL_ROOT_CERT could not be used, so verification falls back to the system trust store.', { source })
+    return { rejectUnauthorized: true }
+  }
+
+  const certificates = (pem.match(/-----BEGIN CERTIFICATE-----/g) ?? []).length
+  try {
+    logger.info('Verifying the database certificate against a supplied CA', {
+      certificates,
+      source,
+      subject: new crypto.X509Certificate(pem).subject.replace(/\n/g, ', '),
+    })
+  } catch {
+    logger.warn('The supplied CA is not a parsable X.509 certificate, so Node will decide what to do with it.', {
+      certificates,
+      source,
+    })
+  }
+
+  return { rejectUnauthorized: true, ca: pem }
 }
 
 export const pool = new Pool({

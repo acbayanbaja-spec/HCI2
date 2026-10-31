@@ -143,7 +143,7 @@ Both `.env` files are git-ignored; only the `.env.example` templates are committ
 | --- | --- |
 | `NODE_ENV`, `PORT` | `production` turns on the strict checks below; Render supplies `PORT` |
 | `DATABASE_URL` | full connection string, including `sslmode=require` in production |
-| `PGSSL` | `true` in production; `PGSSL_ROOT_CERT` supplies a private CA, `PGSSL_INSECURE=true` disables verification and is never appropriate for production |
+| `PGSSL` | `true` in production; `PGSSL_ROOT_CERT` supplies a private CA as PEM text **or** a file path, `PGSSL_INSECURE=true` disables verification and is never appropriate for production |
 | `DB_POOL_MAX`, `DB_STATEMENT_TIMEOUT_MS` | pool ceiling and per-connection statement timeout |
 | `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET` | ≥ 32 characters each, and they must differ |
 | `DATA_ENCRYPTION_KEY` | 64 hex characters; encrypts MFA secrets at rest |
@@ -393,7 +393,7 @@ CSRF at once.
 | `Migration 000X changed after it was applied` | An applied file was edited. Revert it and add a new migration. |
 | `COOKIE_SAME_SITE=none requires COOKIE_SECURE=true` | Browsers reject that combination; set `COOKIE_SECURE=true`. |
 | `CORS_ORIGINS contains a development URL` | Production refuses localhost origins; list the real HTTPS origin. |
-| `self-signed certificate in certificate chain` when connecting to Supabase | Supabase's pooler presents its own private CA (`Supabase Root 2021 CA`), which no operating system trust store carries. Download the CA from the Supabase connection settings and put the PEM in `PGSSL_ROOT_CERT` - on Render **and** in the local `server/.env` used for migrations. Never fix this with `PGSSL_INSECURE=true`. |
+| `self-signed certificate in certificate chain` when connecting to Supabase | Supabase's pooler presents its own private CA (`Supabase Root 2021 CA`, SHA-256 `8070…`), which no operating system trust store carries. Set `PGSSL_ROOT_CERT` to `server/supabase-root-ca.pem` - the file is committed - on Render **and** for the local migration run. The startup log names the CA it loaded, so an absent variable is visible instead of guessing. Never fix this with `PGSSL_INSECURE=true`. |
 | `Invalid environment configuration ... expected string, received undefined` | A required variable is missing from the deployment. Schema checks run **before** the production cross-field checks, so this crash hides the rest - fill the whole set at once. |
 | `APP_CLIENT_URL still looks like a placeholder value` | `REPLACE-WITH-…` was copied verbatim from `render.yaml`; use the real Vercel origin. |
 | `SMTP_HOST is required in production` | Password resets would be silently swallowed; configure mail. |

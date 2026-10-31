@@ -44,10 +44,10 @@ services:
         value: "587"
       - key: DATABASE_URL
         sync: false
-      # Supabase's pooler is signed by its own private CA, so this must hold the
-      # PEM you download from its connection settings or TLS verification fails.
+      # Supabase's pooler is signed by its own private CA, which no system trust
+      # store carries. The certificate is committed, so this names the file.
       - key: PGSSL_ROOT_CERT
-        sync: false
+        value: server/supabase-root-ca.pem
       - key: ACCESS_TOKEN_SECRET
         sync: false
       - key: REFRESH_TOKEN_SECRET
