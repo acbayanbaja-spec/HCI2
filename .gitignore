@@ -39,3 +39,7 @@ Thumbs.db
 # Test artifacts
 .testdb/
 server/.testdb/
+
+# Provider CA certificates kept locally to satisfy PGSSL_ROOT_CERT. Public and
+# harmless, but they belong to one hosting choice, not to the codebase.
+server/*.pem
