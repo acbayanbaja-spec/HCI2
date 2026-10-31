@@ -98,8 +98,12 @@ npm workspaces tie the two packages together, so one `npm install` at the root s
 
 ## Run it locally
 
-Requirements: **Node ≥ 20.19** (`.node-version` pins 24) and npm 10+. No database
-installation is needed — `db:start` runs a disposable PostgreSQL cluster inside the repo.
+Requirements: **Node 24** (`engines` in the root `package.json` and `.node-version` both
+pin it, so Vercel and Render cannot silently build on a different major) and npm 10+. No
+database installation is needed — `db:start` runs a disposable PostgreSQL cluster inside
+the repo. That cluster uses a per-platform binary held in `optionalDependencies`, so
+`npm ci` works on Linux hosts and skips it; on macOS or Linux, point `DATABASE_URL` at any
+PostgreSQL 16+ instance instead.
 
 ```bash
 npm install
@@ -342,7 +346,8 @@ Create a **Web Service** from this repository. The Blueprint in `render.yaml` su
 everything except secrets, which are marked `sync: false` and must be entered in the
 dashboard:
 
-- Build: `npm ci && npm run build --workspace server`
+- Build: `npm ci --include=dev && npm run build --workspace server` — Render sets
+  `NODE_ENV=production`, which would otherwise skip the dev dependencies that `tsc` needs
 - Start: `node server/dist/index.js`
 - Health check path: `/health/ready`
 - `CORS_ORIGINS` and `APP_CLIENT_URL`: your Vercel origin, `https://`, no trailing slash

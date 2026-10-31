@@ -4,7 +4,7 @@
   "private": true,
   "description": "Digital Guardian - An Intelligent Personal Digital Safety and Security Management System",
   "engines": {
-    "node": ">=20.19.0"
+    "node": "24.x"
   },
   "workspaces": [
     "server",
@@ -28,8 +28,10 @@
     "verify": "node scripts/verify.mjs"
   },
   "devDependencies": {
-    "@embedded-postgres/windows-x64": "18.6.0-beta.19",
     "concurrently": "^10.0.6",
     "pg": "^8.23.1"
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/windows-x64": "18.6.0-beta.19"
   }
 }
