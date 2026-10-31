@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg'
 import { env } from '../config/env'
 import { logger } from '../lib/logger'
@@ -10,7 +11,28 @@ function buildSsl() {
     )
     return { rejectUnauthorized: false }
   }
-  return { rejectUnauthorized: true, ca: process.env.PGSSL_ROOT_CERT }
+
+  const pem = process.env.PGSSL_ROOT_CERT ?? ''
+  const certificates = (pem.match(/-----BEGIN CERTIFICATE-----/g) ?? []).length
+  if (pem !== '' && certificates === 0) {
+    logger.error(
+      'PGSSL_ROOT_CERT is set but holds no PEM certificate, so verification will fall back to the system trust store. It must contain the certificate text, not a file path.',
+      { firstCharacters: pem.slice(0, 24) },
+    )
+  } else if (certificates > 0) {
+    try {
+      logger.info('Verifying the database certificate against a supplied CA', {
+        certificates,
+        subject: new crypto.X509Certificate(pem).subject.replace(/\n/g, ', '),
+      })
+    } catch {
+      logger.error('PGSSL_ROOT_CERT contains a PEM block that could not be parsed.', { certificates })
+    }
+  } else {
+    logger.info('PGSSL is on with no PGSSL_ROOT_CERT, so the database CA must be in the system trust store.')
+  }
+
+  return { rejectUnauthorized: true, ca: pem || undefined }
 }
 
 export const pool = new Pool({
