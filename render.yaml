@@ -11,9 +11,10 @@ services:
     # Singapore keeps the API next to an ap-southeast-1 Supabase project.
     region: singapore
     rootDir: /
-    # Render sets NODE_ENV=production, which makes `npm ci` skip devDependencies -
-    # but the build runs tsc and needs @types/node, so dev dependencies are
-    # installed explicitly. They are still not installed at runtime.
+    # Render exports NODE_ENV=production, so `npm ci` skips devDependencies.
+    # The build runs tsc, so the compiler and the @types packages the API
+    # imports are regular dependencies (see server/package.json), and dev
+    # dependencies are installed on top as a safety net.
     buildCommand: npm ci --include=dev && npm run build --workspace server
     startCommand: node server/dist/index.js
     # /health/ready connects to the database; /health only proves the process is up.

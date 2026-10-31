@@ -397,6 +397,7 @@ CSRF at once.
 | `<KEY> still looks like a placeholder value` | A template value survived into the environment; set the real one. |
 | Sign-in works locally but not on the deployment | `CORS_ORIGINS` mismatch, `COOKIE_DOMAIN` set, or `VITE_API_BASE_URL` changed without redeploying. |
 | Migrations hang against Supabase | You used the 6543 transaction pooler; switch to the 5432 session pooler. |
+| `TS2688: Cannot find type definition file for 'node'` on a hosted build | The build installed with `NODE_ENV=production` and no dev dependencies. `typescript` and the `@types/*` the API imports are normal dependencies of `@guardian/server` for exactly this reason, and the deploy commands add `--include=dev` on top. |
 | `Invalid username or token` on `git push` | GitHub needs an interactive sign-in; run the push from your own terminal. |
 
 ---
