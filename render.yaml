@@ -1,0 +1,56 @@
+# Render Blueprint for the Digital Guardian API.
+#
+# Every secret is declared with `sync: false`, which means Render asks you for
+# the value in its dashboard at create time and never stores it in this file.
+# Commit this Blueprint; never commit a value.
+services:
+  - type: web
+    name: digital-guardian-api
+    runtime: node
+    plan: free
+    # Singapore keeps the API next to an ap-southeast-1 Supabase project.
+    region: singapore
+    rootDir: /
+    buildCommand: npm ci && npm run build --workspace server
+    startCommand: node server/dist/index.js
+    # /health/ready connects to the database; /health only proves the process is up.
+    healthCheckPath: /health/ready
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PGSSL
+        value: "true"
+      - key: COOKIE_SECURE
+        value: "true"
+      # Vercel and Render are different sites, so the session cookie has to be
+      # sent cross-site. Put both on one registrable domain instead and this
+      # can go back to `lax`, which browsers treat more favourably.
+      - key: COOKIE_SAME_SITE
+        value: none
+      # COOKIE_DOMAIN is deliberately absent: setting it for a cross-site
+      # session cookie is the usual reason the browser silently stops storing it.
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: CORS_ORIGINS
+        value: https://REPLACE-WITH-YOUR-VERCEL-APP.vercel.app
+      - key: APP_CLIENT_URL
+        value: https://REPLACE-WITH-YOUR-VERCEL-APP.vercel.app
+      - key: SMTP_PORT
+        value: "587"
+      - key: DATABASE_URL
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        sync: false
+      - key: REFRESH_TOKEN_SECRET
+        sync: false
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
