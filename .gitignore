@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+coverage/
+
+# Environment and secrets - never commit these
+.env
+.env.*
+!.env.example
+
+# Local database cluster data (dev-only embedded Postgres)
+.pgdata/
+.devdb/
+pglog.txt
+
+# Runtime artifacts
+logs/
+*.log
+npm-debug.log*
+.tmp/
+tmp/
+
+# Mail written to disk when SMTP is not configured. These files carry live
+# email-verification and password-reset links, so they stay local.
+server/.outbox/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.testdb/
+server/.testdb/

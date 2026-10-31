@@ -1,0 +1,35 @@
+{
+  "name": "digital-guardian",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Digital Guardian - An Intelligent Personal Digital Safety and Security Management System",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "db:start": "node scripts/dev-db.mjs start",
+    "db:stop": "node scripts/dev-db.mjs stop",
+    "db:status": "node scripts/dev-db.mjs status",
+    "db:reset": "node scripts/dev-db.mjs reset --yes",
+    "gen:secrets": "node scripts/dev-db.mjs secrets",
+    "migrate": "npm run migrate --workspace server",
+    "seed": "npm run seed --workspace server",
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace server && npm run build --workspace client",
+    "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace client",
+    "test": "npm run test --workspace server",
+    "test:watch": "npm run test:watch --workspace server",
+    "verify": "node scripts/verify.mjs"
+  },
+  "devDependencies": {
+    "@embedded-postgres/windows-x64": "18.6.0-beta.19",
+    "concurrently": "^10.0.6",
+    "pg": "^8.23.1"
+  }
+}

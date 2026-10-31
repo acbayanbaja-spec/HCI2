@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: the theme is a user preference stored on the account,
+   not an OS guess, so the switch has to be a class we control. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --canvas: #f6f8fb;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --sunken: #eef2f7;
+  --line: #d7dee8;
+  --line-strong: #b9c4d4;
+  --ink: #101828;
+  --ink-muted: #475467;
+  --ink-faint: #667085;
+  --brand: #0b6b63;
+  --brand-hover: #095a52;
+  --brand-ink: #ffffff;
+  --brand-soft: #d8f0ed;
+  --focus: #1573c4;
+
+  --good: #067647;
+  --good-soft: #d9f3e4;
+  --watch: #92400e;
+  --watch-soft: #fdf1d6;
+  --warn: #b42318;
+  --warn-soft: #fee4e2;
+  --danger: #98160f;
+  --danger-soft: #ffdcd7;
+  --info: #175cd3;
+  --info-soft: #dbeafe;
+}
+
+.dark {
+  --canvas: #070b14;
+  --surface: #0f1626;
+  --surface-raised: #141d30;
+  --sunken: #0a1120;
+  --line: #1f2b42;
+  --line-strong: #2c3b57;
+  --ink: #e8edf6;
+  --ink-muted: #a7b3c8;
+  --ink-faint: #7d8aa3;
+  --brand: #2dd4bf;
+  --brand-hover: #5ae3d2;
+  --brand-ink: #06251f;
+  --brand-soft: #103a37;
+  --focus: #7dd3fc;
+
+  --good: #4ade80;
+  --good-soft: #0f2f21;
+  --watch: #fbbf24;
+  --watch-soft: #33270d;
+  --warn: #fca5a5;
+  --warn-soft: #3a1414;
+  --danger: #fecaca;
+  --danger-soft: #480f0f;
+  --info: #93c5fd;
+  --info-soft: #12233f;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-watch: var(--watch);
+  --color-watch-soft: var(--watch-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-card: 14px;
+  --radius-field: 10px;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.06), 0 8px 24px -12px rgb(16 24 40 / 0.18);
+  --shadow-pop: 0 12px 40px -12px rgb(16 24 40 / 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Every control gets the same visible focus ring - keyboard users should never
+     have to hunt for the caret. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.0175em;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--ink);
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer utilities {
+  .skip-link {
+    position: fixed;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 60;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    background: var(--brand);
+    color: var(--brand-ink);
+    font-weight: 600;
+    transform: translateY(-200%);
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, var(--sunken) 0%, var(--line) 45%, var(--sunken) 90%);
+    background-size: 300% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: 150% 0;
+    }
+    to {
+      background-position: -150% 0;
+    }
+  }
+
+  .animate-rise {
+    animation: rise 0.22s ease-out;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .shimmer {
+    background: var(--sunken);
+  }
+}
