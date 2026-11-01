@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { explainDatabaseError, normalizeDatabaseUrl } from '../src/db/connection-url'
+import {
+  applyPasswordOverride,
+  explainDatabaseError,
+  normalizeDatabaseUrl,
+  poolConnectionConfig,
+} from '../src/db/connection-url'
 
 describe('normalizeDatabaseUrl', () => {
   it('leaves a local development URL alone', () => {
@@ -26,9 +31,36 @@ describe('normalizeDatabaseUrl', () => {
   })
 
   it('percent-encodes reserved characters in the password', () => {
-    const { url } = normalizeDatabaseUrl('postgresql://postgres.abc:p@ss/w:rd#1@db.abc.supabase.co:5432/postgres')
+    const { url, password } = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:p@ss/w:rd#1@db.abc.supabase.co:5432/postgres',
+    )
+    expect(password).toBe('p@ss/w:rd#1')
     expect(url).toContain(encodeURIComponent('p@ss/w:rd#1'))
     expect(url).toContain('@db.abc.supabase.co:5432/postgres')
+  })
+
+  it('decodes a percent-encoded URI password for the driver', () => {
+    const normalized = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:p%40ss%2Fword@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    )
+    expect(normalized.password).toBe('p@ss/word')
+    expect(poolConnectionConfig(normalized)).toMatchObject({
+      user: 'postgres.abc',
+      password: 'p@ss/word',
+      port: 5432,
+      host: 'aws-0-ap-southeast-1.pooler.supabase.com',
+    })
+  })
+
+  it('lets DATABASE_PASSWORD replace a mangled URI password', () => {
+    const normalized = applyPasswordOverride(
+      normalizeDatabaseUrl(
+        'postgresql://postgres.abc:wrong@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+      ),
+      'raw p@ss',
+    )
+    expect(normalized.password).toBe('raw p@ss')
+    expect(poolConnectionConfig(normalized).password).toBe('raw p@ss')
   })
 
   it('rewrites pooler user postgres when a project ref is supplied', () => {
@@ -68,6 +100,7 @@ describe('explainDatabaseError', () => {
       rewrittenUser: true,
     })
     expect(explained.message).toContain('postgres.abc')
-    expect(explained.message).toContain('Session pooler')
+    expect(explained.message).toContain('rejected the password')
+    expect(explained.message).not.toContain('not postgres')
   })
 })

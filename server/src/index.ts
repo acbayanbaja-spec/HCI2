@@ -2,8 +2,8 @@ import { createApp } from './app'
 import { env } from './config/env'
 import { logger } from './lib/logger'
 import { explainDatabaseError } from './db/connection-url'
-import { assertMigrationsCurrent } from './db/migrate'
-import { closePool } from './db/pool'
+import { runMigrations } from './db/migrate'
+import { closePool, waitForDatabase } from './db/pool'
 import { purgeExpiredSessions } from './services/session.service'
 
 const SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
@@ -14,9 +14,10 @@ async function sweep() {
 }
 
 async function main() {
-  // Booting against a schema that does not match the migrations would let the
-  // API write rows nothing can read, so it refuses to start instead.
-  await assertMigrationsCurrent()
+  // Hosted boots have no separate migrate step. The runner holds a session
+  // advisory lock, so two Render instances cannot apply the same file twice.
+  await waitForDatabase()
+  await runMigrations({ onMessage: (message) => logger.info(message) })
 
   const app = createApp()
   const server = app.listen(env.port, () => {

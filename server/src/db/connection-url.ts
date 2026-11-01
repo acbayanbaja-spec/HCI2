@@ -9,6 +9,7 @@ export type DatabaseTarget = {
 
 export type NormalizedDatabaseUrl = {
   url: string
+  password: string
   target: DatabaseTarget
 }
 
@@ -124,7 +125,32 @@ export function normalizeDatabaseUrl(
 
   return {
     url,
+    password,
     target: { user, host, port, database, pooler, rewrittenUser },
+  }
+}
+
+export function applyPasswordOverride(
+  normalized: NormalizedDatabaseUrl,
+  override?: string,
+): NormalizedDatabaseUrl {
+  const next = override?.trim()
+  if (!next || next === normalized.password) return normalized
+  const { target } = normalized
+  const queryIndex = normalized.url.indexOf('?')
+  const query = queryIndex === -1 ? '' : normalized.url.slice(queryIndex)
+  const url = `postgresql://${encodeURIComponent(target.user)}:${encodeURIComponent(next)}@${target.host}:${target.port}/${target.database}${query}`
+  return { url, password: next, target }
+}
+
+export function poolConnectionConfig(input: { password: string; target: DatabaseTarget }) {
+  const host = input.target.host
+  return {
+    host: host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host,
+    port: Number(input.target.port),
+    user: input.target.user,
+    password: input.password,
+    database: input.target.database,
   }
 }
 
@@ -133,11 +159,15 @@ export function explainDatabaseError(error: unknown, target?: DatabaseTarget): E
   if (/password authentication failed/i.test(message)) {
     const user = target?.user ?? 'unknown'
     const host = target?.host ?? 'unknown'
+    const usernameLooksScoped = user.includes('.')
     const poolerHint = target?.pooler
-      ? ' The session pooler username must be postgres.<project-ref>, not postgres. Copy it from Supabase → Connect → Session pooler (port 5432).'
+      ? usernameLooksScoped
+        ? ' The pooler username is already postgres.<project-ref>. Postgres rejected the password, not the username. Use the database password from Supabase → Settings → Database (not the account password or an API key). If it contains @ : / # ? % or $, set DATABASE_PASSWORD on Render to the raw password so the URI cannot mangle it.'
+        : ' The session pooler username must be postgres.<project-ref>, not postgres. Copy it from Supabase → Connect → Session pooler (port 5432).'
       : ''
-    const encodingHint =
-      ' If the database password contains @ : / # or ?, percent-encode those characters in DATABASE_URL.'
+    const encodingHint = usernameLooksScoped
+      ? ''
+      : ' If the database password contains @ : / # or ?, percent-encode those characters in DATABASE_URL.'
     return new Error(
       `Database authentication failed for user "${user}" at ${host}.${poolerHint}${encodingHint} Confirm the database password in the Render dashboard matches the one in Supabase → Settings → Database.`,
     )

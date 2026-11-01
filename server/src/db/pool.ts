@@ -4,6 +4,7 @@ import path from 'node:path'
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg'
 import { env } from '../config/env'
 import { logger } from '../lib/logger'
+import { poolConnectionConfig } from './connection-url'
 
 const PEM_MARKER = '-----BEGIN CERTIFICATE-----'
 
@@ -76,7 +77,7 @@ logger.info('Database target', {
 })
 
 export const pool = new Pool({
-  connectionString: env.database.url,
+  ...poolConnectionConfig({ password: env.database.password, target: env.database.target }),
   max: env.database.poolMax,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
@@ -122,6 +123,27 @@ export async function ping(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+function isTransientAuthFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /password authentication failed|circuit breaker open/i.test(message)
+}
+
+/** Supavisor can reject a correct password for a few seconds after a rotation. */
+export async function waitForDatabase(attempts = 4): Promise<void> {
+  let lastError: unknown
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await pool.query('select 1')
+      return
+    } catch (error) {
+      lastError = error
+      if (!isTransientAuthFailure(error) || attempt === attempts) throw error
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt))
+    }
+  }
+  throw lastError
 }
 
 export async function closePool(): Promise<void> {

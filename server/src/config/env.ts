@@ -2,7 +2,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { config as loadDotenv } from 'dotenv'
 import { z } from 'zod'
-import { normalizeDatabaseUrl } from '../db/connection-url'
+import { applyPasswordOverride, normalizeDatabaseUrl } from '../db/connection-url'
 
 // .env sits next to package.json in both src (tsx) and dist (compiled) layouts.
 loadDotenv({ path: path.resolve(__dirname, '..', '..', '.env'), quiet: true })
@@ -26,6 +26,7 @@ const envSchema = z.object({
   CORS_ORIGINS: csvList.default(['http://localhost:5173']),
 
   DATABASE_URL: z.string().min(12, 'DATABASE_URL is required'),
+  DATABASE_PASSWORD: z.string().optional(),
   SUPABASE_PROJECT_REF: z
     .string()
     .optional()
@@ -138,7 +139,10 @@ function buildEnv() {
   const env = parsed.data
   const isProduction = env.NODE_ENV === 'production'
   const isTest = env.NODE_ENV === 'test'
-  const database = normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF })
+  const database = applyPasswordOverride(
+    normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF }),
+    env.DATABASE_PASSWORD,
+  )
 
   return {
     nodeEnv: env.NODE_ENV,
@@ -149,6 +153,7 @@ function buildEnv() {
     clientUrl: env.APP_CLIENT_URL,
     database: {
       url: database.url,
+      password: database.password,
       target: database.target,
       ssl: env.PGSSL,
       poolMax: env.DB_POOL_MAX,
