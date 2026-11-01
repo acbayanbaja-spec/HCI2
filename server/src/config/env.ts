@@ -2,7 +2,12 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { config as loadDotenv } from 'dotenv'
 import { z } from 'zod'
-import { normalizeDatabaseUrl, resolveDatabaseAuth } from '../db/connection-url'
+import {
+  applyPasswordOverride,
+  collectPasswordCandidates,
+  normalizeDatabaseUrl,
+  resolveDatabaseAuth,
+} from '../db/connection-url'
 
 // .env sits next to package.json in both src (tsx) and dist (compiled) layouts.
 loadDotenv({ path: path.resolve(__dirname, '..', '..', '.env'), quiet: true })
@@ -140,10 +145,22 @@ function buildEnv() {
   const env = parsed.data
   const isProduction = env.NODE_ENV === 'production'
   const isTest = env.NODE_ENV === 'test'
-  const database = resolveDatabaseAuth(
-    normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF }),
-    env.DATABASE_PASSWORD || process.env.PGPASSWORD,
-  )
+  const fromUri = normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF })
+  let database = resolveDatabaseAuth(fromUri, env.DATABASE_PASSWORD || process.env.PGPASSWORD)
+  const passwordCandidates = collectPasswordCandidates({
+    password: database.password,
+    encoded: database.passwordEncoded,
+    rawUrl: env.DATABASE_URL,
+    extra: [fromUri.password, fromUri.passwordEncoded],
+  })
+  if (passwordCandidates.length === 0) {
+    throw new Error(
+      'DATABASE_URL / DATABASE_PASSWORD looks like a Supabase API key (JWT or sb_*), not the Postgres database password. Use the Database password from Supabase → Settings → Database.',
+    )
+  }
+  if (!passwordCandidates.includes(database.password)) {
+    database = applyPasswordOverride(fromUri, passwordCandidates[0])
+  }
 
   return {
     nodeEnv: env.NODE_ENV,
@@ -155,8 +172,10 @@ function buildEnv() {
     database: {
       url: database.url,
       password: database.password,
-      passwordSource: database.passwordSource,
-      passwordLength: database.passwordLength,
+      passwordCandidates,
+      authFrom: database.passwordSource,
+      credentialChars: database.passwordLength,
+      dollarInCredential: database.password.includes('$'),
       target: database.target,
       ssl: env.PGSSL,
       poolMax: env.DB_POOL_MAX,

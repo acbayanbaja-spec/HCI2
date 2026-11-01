@@ -14,15 +14,22 @@ async function sweep() {
 }
 
 async function main() {
-  // Hosted boots have no separate migrate step. The runner holds a session
-  // advisory lock, so two Render instances cannot apply the same file twice.
-  await waitForDatabase()
-  await runMigrations({ onMessage: (message) => logger.info(message) })
-
   const app = createApp()
+  // Bind PORT before talking to Postgres so Render does not treat a password
+  // retry as "no open ports" and kill the instance mid-boot.
   const server = app.listen(env.port, () => {
     logger.info('Digital Guardian API listening', { port: env.port, env: env.nodeEnv })
   })
+
+  try {
+    await waitForDatabase()
+    await runMigrations({ onMessage: (message) => logger.info(message) })
+  } catch (error) {
+    logger.error('API could not start', { error: explainDatabaseError(error, env.database.target) })
+    await closePool().catch(() => undefined)
+    server.close()
+    process.exit(1)
+  }
 
   await sweep().catch((error) => logger.warn('First session sweep failed', { error }))
   const timer = setInterval(() => {
@@ -53,5 +60,5 @@ async function main() {
 main().catch(async (error) => {
   logger.error('API could not start', { error: explainDatabaseError(error, env.database.target) })
   await closePool().catch(() => undefined)
-  process.exitCode = 1
+  process.exit(1)
 })

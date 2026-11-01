@@ -12,6 +12,7 @@ export type PasswordSource = 'uri' | 'DATABASE_PASSWORD'
 export type NormalizedDatabaseUrl = {
   url: string
   password: string
+  passwordEncoded: string
   passwordSource: PasswordSource
   passwordLength: number
   target: DatabaseTarget
@@ -101,7 +102,8 @@ export function normalizeDatabaseUrl(
 
   const colon = userinfo.indexOf(':')
   let user = decodeOnce(colon === -1 ? userinfo : userinfo.slice(0, colon))
-  const password = decodePercentSequences(colon === -1 ? '' : userinfo.slice(colon + 1))
+  const passwordEncoded = colon === -1 ? '' : userinfo.slice(colon + 1)
+  const password = decodePercentSequences(passwordEncoded)
   const { host, port: parsedPort } = splitHostPort(hostport)
   let port = parsedPort
   const database = decodeOnce((pathPart.replace(/^\//, '').split('/')[0] || 'postgres').split('#')[0] ?? 'postgres')
@@ -153,10 +155,62 @@ export function normalizeDatabaseUrl(
   return {
     url,
     password,
+    passwordEncoded,
     passwordSource: 'uri',
     passwordLength: password.length,
     target: { user, host, port, database, pooler, rewrittenUser },
   }
+}
+
+export function looksLikeSupabaseApiKey(password: string): boolean {
+  return /^eyJ/.test(password) || /service_role/.test(password) || /^(sb_publishable_|sb_secret_)/.test(password)
+}
+
+function expandPasswordForms(value?: string): string[] {
+  if (!value) return []
+  const forms = [value]
+  if (/%[0-9A-Fa-f]{2}/.test(value)) forms.push(decodePercentSequences(value))
+  try {
+    forms.push(decodeURIComponent(value))
+  } catch {
+    // Literal percent characters are already in `forms`.
+  }
+  if (value.includes('+')) forms.push(value.replace(/\+/g, ' '))
+  if (value.includes('$$')) forms.push(value.replaceAll('$$', '$'))
+  return forms
+}
+
+export function collectPasswordCandidates(input: {
+  password: string
+  encoded?: string
+  passwordEncoded?: string
+  rawUrl?: string
+  extra?: string[]
+}): string[] {
+  const out: string[] = []
+  const add = (value?: string) => {
+    for (const form of expandPasswordForms(value)) {
+      if (!form || out.includes(form) || looksLikeSupabaseApiKey(form)) continue
+      out.push(form)
+    }
+  }
+  add(input.password)
+  add(input.encoded ?? input.passwordEncoded)
+  for (const extra of input.extra ?? []) add(extra)
+  if (input.rawUrl) {
+    try {
+      const fromUri = normalizeDatabaseUrl(input.rawUrl)
+      add(fromUri.password)
+      add(fromUri.passwordEncoded)
+    } catch {
+      try {
+        add(new URL(input.rawUrl).password)
+      } catch {
+        // Custom parser already captured the URI.
+      }
+    }
+  }
+  return out
 }
 
 function passwordFromOverride(raw?: string): string | undefined {
@@ -188,6 +242,7 @@ export function applyPasswordOverride(
   return {
     url,
     password: next,
+    passwordEncoded: encodeURIComponent(next),
     passwordSource: 'DATABASE_PASSWORD',
     passwordLength: next.length,
     target,
@@ -220,7 +275,7 @@ export function explainDatabaseError(error: unknown, target?: DatabaseTarget): E
     const usernameLooksScoped = user.includes('.')
     const poolerHint = target?.pooler
       ? usernameLooksScoped
-        ? ' The pooler username is already postgres.<project-ref>. Postgres rejected the password. In Render, set DATABASE_PASSWORD to the raw value from Supabase → Settings → Database → Database password (reset it there if unsure). Do not use the account password or an API key. Then redeploy. The pooler can keep the old hash for about 30 seconds after a reset.'
+        ? ' Host, username, TLS, and port are already correct. The secret in DATABASE_URL is not the database password Postgres expects. In Supabase, open Settings → Database and reset Database password. In Render → Environment, set DATABASE_PASSWORD to that new password only (not the URI, not an API key). If it contains $, type $$ instead of a single $. Save so the service restarts, then wait a minute — repeated failed logins can open the pooler circuit breaker.'
         : ' The session pooler username must be postgres.<project-ref>, not postgres. Copy it from Supabase → Connect → Session pooler (port 5432).'
       : ''
     const encodingHint = usernameLooksScoped

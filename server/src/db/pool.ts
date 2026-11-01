@@ -74,8 +74,10 @@ logger.info('Database target', {
   port: env.database.target.port,
   database: env.database.target.database,
   rewrittenUser: env.database.target.rewrittenUser,
-  passwordSource: env.database.passwordSource,
-  passwordLength: env.database.passwordLength,
+  authFrom: env.database.authFrom,
+  credentialChars: env.database.credentialChars,
+  dollarInCredential: env.database.dollarInCredential,
+  candidateCount: env.database.passwordCandidates.length,
 })
 
 export const pool = new Pool({
@@ -85,9 +87,11 @@ export const pool = new Pool({
   connectionTimeoutMillis: 10_000,
   ssl: buildSsl(),
   application_name: 'digital-guardian-api',
-  // Asked for at connect time rather than with a follow-up query, so a bound
-  // statement can never start on a connection whose limit is not set yet.
-  options: `-c statement_timeout=${env.database.statementTimeoutMs}`,
+})
+
+pool.on('connect', (client) => {
+  // Startup `options` is not reliable through Supavisor; set the timeout on the session.
+  void client.query(`set statement_timeout = ${env.database.statementTimeoutMs}`)
 })
 
 pool.on('error', (error) => {
@@ -132,21 +136,22 @@ function isTransientAuthFailure(error: unknown): boolean {
   return /password authentication failed|circuit breaker open/i.test(message)
 }
 
-/** Supavisor can reject a correct password for about 30 seconds after a rotation. */
-export async function waitForDatabase(attempts = env.database.target.pooler ? 8 : 2): Promise<void> {
+/** Try each password form once. Do not hammer the pooler — that opens its circuit breaker. */
+export async function waitForDatabase(): Promise<void> {
+  const passwords = env.database.passwordCandidates
   let lastError: unknown
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+  for (let index = 0; index < passwords.length; index += 1) {
+    pool.options.password = passwords[index]
     try {
       await pool.query('select 1')
       return
     } catch (error) {
       lastError = error
-      if (!isTransientAuthFailure(error) || attempt === attempts) throw error
-      logger.warn('Database login rejected; retrying in case the pooler still has a cached password', {
-        attempt,
-        of: attempts,
+      if (!isTransientAuthFailure(error)) throw error
+      logger.warn('Database login rejected; trying the next credential form', {
+        attempt: index + 1,
+        of: passwords.length,
       })
-      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
     }
   }
   throw lastError

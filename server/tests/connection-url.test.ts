@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyPasswordOverride,
+  collectPasswordCandidates,
   explainDatabaseError,
+  looksLikeSupabaseApiKey,
   normalizeDatabaseUrl,
   poolConnectionConfig,
   resolveDatabaseAuth,
@@ -89,6 +91,30 @@ describe('normalizeDatabaseUrl', () => {
     expect(resolveDatabaseAuth(normalized, ' secret\n').passwordSource).toBe('DATABASE_PASSWORD')
   })
 
+  it('keeps the encoded URI password as a fallback candidate', () => {
+    const normalized = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:p%40ss%2Fword@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    )
+    expect(normalized.password).toBe('p@ss/word')
+    expect(normalized.passwordEncoded).toBe('p%40ss%2Fword')
+    expect(collectPasswordCandidates(normalized)).toEqual(['p@ss/word', 'p%40ss%2Fword'])
+  })
+
+  it('drops JWT / Supabase API keys from the candidate list and keeps the URI password', () => {
+    const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.aaa.bbb'
+    expect(looksLikeSupabaseApiKey(jwt)).toBe(true)
+    expect(
+      collectPasswordCandidates({
+        password: jwt,
+        rawUrl: 'postgresql://postgres.abc:secret@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+      }),
+    ).toEqual(['secret'])
+  })
+
+  it('treats Render $$ as a single dollar in the candidate list', () => {
+    expect(collectPasswordCandidates({ password: 'ab$$cd' })).toEqual(['ab$$cd', 'ab$cd'])
+  })
+
   it('pulls the password out of a full URI pasted into DATABASE_PASSWORD', () => {
     const normalized = normalizeDatabaseUrl(
       'postgresql://postgres.abc:wrong@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
@@ -143,8 +169,8 @@ describe('explainDatabaseError', () => {
       rewrittenUser: true,
     })
     expect(explained.message).toContain('postgres.abc')
-    expect(explained.message).toContain('rejected the password')
     expect(explained.message).toContain('DATABASE_PASSWORD')
+    expect(explained.message).toContain('$$')
     expect(explained.message).not.toContain('not postgres')
   })
 })
