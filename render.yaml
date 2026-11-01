@@ -44,8 +44,9 @@ services:
         value: "587"
       - key: DATABASE_URL
         sync: false
-      # Required for the Supabase pooler. Raw Database password from
-      # Supabase → Settings → Database; not the URI and not the account password.
+      # Optional. Raw Database password from Supabase → Settings → Database.
+      # When set, it replaces the password inside DATABASE_URL. Leave unset to
+      # use the URI password. Do not paste the whole connection string here.
       - key: DATABASE_PASSWORD
         sync: false
       # Optional. Only needed if DATABASE_URL still uses user "postgres" against

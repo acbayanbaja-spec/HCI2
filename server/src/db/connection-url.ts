@@ -159,11 +159,24 @@ export function normalizeDatabaseUrl(
   }
 }
 
+function passwordFromOverride(raw?: string): string | undefined {
+  const next = sanitizeSecret(raw)
+  if (!next) return undefined
+  if (/^postgres(?:ql)?:\/\//i.test(next)) {
+    try {
+      return normalizeDatabaseUrl(next).password
+    } catch {
+      return next
+    }
+  }
+  return next
+}
+
 export function applyPasswordOverride(
   normalized: NormalizedDatabaseUrl,
   override?: string,
 ): NormalizedDatabaseUrl {
-  const next = sanitizeSecret(override)
+  const next = passwordFromOverride(override)
   if (!next) return { ...normalized, passwordLength: normalized.password.length }
   if (next === normalized.password) {
     return { ...normalized, passwordSource: 'DATABASE_PASSWORD', passwordLength: next.length }
@@ -184,15 +197,8 @@ export function applyPasswordOverride(
 export function resolveDatabaseAuth(
   normalized: NormalizedDatabaseUrl,
   override: string | undefined,
-  options: { production: boolean },
 ): NormalizedDatabaseUrl {
-  const resolved = applyPasswordOverride(normalized, override)
-  if (options.production && resolved.target.pooler && resolved.passwordSource !== 'DATABASE_PASSWORD') {
-    throw new Error(
-      'DATABASE_PASSWORD is required in production when DATABASE_URL uses the Supabase pooler. In Render, add DATABASE_PASSWORD with the raw Database password from Supabase → Settings → Database (not the account password, not an API key, and not the whole URI). Leave DATABASE_URL as the Session pooler string; the password inside it is ignored once DATABASE_PASSWORD is set.',
-    )
-  }
-  return resolved
+  return applyPasswordOverride(normalized, override)
 }
 
 export function poolConnectionConfig(input: { password: string; target: DatabaseTarget }) {

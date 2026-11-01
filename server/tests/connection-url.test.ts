@@ -79,12 +79,26 @@ describe('normalizeDatabaseUrl', () => {
     ).toThrow(/missing a password/)
   })
 
-  it('requires DATABASE_PASSWORD for the production pooler', () => {
+  it('uses the URI password when DATABASE_PASSWORD is unset', () => {
     const normalized = normalizeDatabaseUrl(
       'postgresql://postgres.abc:secret@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
     )
-    expect(() => resolveDatabaseAuth(normalized, undefined, { production: true })).toThrow(/DATABASE_PASSWORD is required/)
-    expect(resolveDatabaseAuth(normalized, ' secret\n', { production: true }).password).toBe('secret')
+    expect(resolveDatabaseAuth(normalized, undefined).password).toBe('secret')
+    expect(resolveDatabaseAuth(normalized, undefined).passwordSource).toBe('uri')
+    expect(resolveDatabaseAuth(normalized, ' secret\n').password).toBe('secret')
+    expect(resolveDatabaseAuth(normalized, ' secret\n').passwordSource).toBe('DATABASE_PASSWORD')
+  })
+
+  it('pulls the password out of a full URI pasted into DATABASE_PASSWORD', () => {
+    const normalized = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:wrong@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    )
+    const resolved = resolveDatabaseAuth(
+      normalized,
+      'postgresql://postgres.abc:p@ss@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    )
+    expect(resolved.password).toBe('p@ss')
+    expect(resolved.passwordSource).toBe('DATABASE_PASSWORD')
   })
 
   it('strips quotes and newlines from a pasted secret', () => {

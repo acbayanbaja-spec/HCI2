@@ -142,8 +142,7 @@ function buildEnv() {
   const isTest = env.NODE_ENV === 'test'
   const database = resolveDatabaseAuth(
     normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF }),
-    env.DATABASE_PASSWORD,
-    { production: isProduction },
+    env.DATABASE_PASSWORD || process.env.PGPASSWORD,
   )
 
   return {
