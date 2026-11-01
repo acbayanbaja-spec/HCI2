@@ -80,7 +80,8 @@ export function normalizeDatabaseUrl(
   const colon = userinfo.indexOf(':')
   let user = decodeOnce(colon === -1 ? userinfo : userinfo.slice(0, colon))
   const password = decodeOnce(colon === -1 ? '' : userinfo.slice(colon + 1))
-  const { host, port } = splitHostPort(hostport)
+  const { host, port: parsedPort } = splitHostPort(hostport)
+  let port = parsedPort
   const database = decodeOnce((pathPart.replace(/^\//, '').split('/')[0] || 'postgres').split('#')[0] ?? 'postgres')
   const params = new URLSearchParams(query.startsWith('?') ? query.slice(1) : query)
 
@@ -105,10 +106,11 @@ export function normalizeDatabaseUrl(
     rewrittenUser = true
   }
 
+  // Same hostname as session mode; only the port differs. Render/Supabase copy-paste
+  // often lands on 6543 (transaction), which cannot hold pg_advisory_lock across
+  // migrate + release. Rewrite instead of crashing the process on boot.
   if (pooler && port === '6543') {
-    throw new Error(
-      'DATABASE_URL uses the Supabase transaction pooler on port 6543. Use the session pooler on port 5432 so migrations can hold a session advisory lock.',
-    )
+    port = '5432'
   }
 
   if (!user) {

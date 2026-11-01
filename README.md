@@ -324,11 +324,11 @@ each provider's dashboard.
 ### 1. Supabase
 
 Create a project, then take the **session-mode pooler** connection string (port **5432**).
-Do not use the transaction pooler on 6543: `runMigrations()` takes a session-scoped
-`pg_advisory_lock` and releases it at the end, and transaction pooling can route those two
-statements to different backends, leaving the lock held. This application has no Prisma,
-so there is no `DIRECT_URL` — one `DATABASE_URL`, pointing at 5432, is correct for both
-migrations and runtime. Add `?sslmode=require` and set `PGSSL=true`.
+`runMigrations()` takes a session-scoped `pg_advisory_lock` and releases it at the end, and
+transaction pooling on 6543 can route those two statements to different backends, leaving
+the lock held. If Render is given a 6543 URL, the API rewrites it to 5432 on boot. This
+application has no Prisma, so there is no `DIRECT_URL` — one `DATABASE_URL`, pointing at
+5432, is correct for both migrations and runtime. Add `?sslmode=require` and set `PGSSL=true`.
 
 Do not enable Row Level Security on these tables and do not use Supabase Auth, its keys,
 or its client libraries: the API is the only client and RLS would filter its own rows.
@@ -401,7 +401,7 @@ CSRF at once.
 | `SMTP_HOST is required in production` | Password resets would be silently swallowed; configure mail. |
 | `<KEY> still looks like a placeholder value` | A template value survived into the environment; set the real one. |
 | Sign-in works locally but not on the deployment | `CORS_ORIGINS` mismatch, `COOKIE_DOMAIN` set, or `VITE_API_BASE_URL` changed without redeploying. |
-| Migrations hang against Supabase | You used the 6543 transaction pooler; switch to the 5432 session pooler. |
+| Migrations hang against Supabase | You used the 6543 transaction pooler; the API now rewrites that URL to 5432 on boot. Redeploy if an older build is still running. |
 | `TS2688: Cannot find type definition file for 'node'` on a hosted build | The build installed with `NODE_ENV=production` and no dev dependencies. `typescript` and the `@types/*` the API imports are normal dependencies of `@guardian/server` for exactly this reason, and the deploy commands add `--include=dev` on top. |
 | `Invalid username or token` on `git push` | GitHub needs an interactive sign-in; run the push from your own terminal. |
 

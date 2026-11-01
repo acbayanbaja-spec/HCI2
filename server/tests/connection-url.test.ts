@@ -47,12 +47,13 @@ describe('normalizeDatabaseUrl', () => {
     ).toThrow(/postgres\.<project-ref>/)
   })
 
-  it('refuses the transaction pooler on 6543', () => {
-    expect(() =>
-      normalizeDatabaseUrl(
-        'postgresql://postgres.abc:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
-      ),
-    ).toThrow(/6543/)
+  it('rewrites the transaction pooler on 6543 to session mode on 5432', () => {
+    const { target, url } = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:secret@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres',
+    )
+    expect(target.port).toBe('5432')
+    expect(url).toContain(':5432/')
+    expect(url).not.toContain(':6543/')
   })
 })
 

@@ -45,7 +45,8 @@ services:
       - key: DATABASE_URL
         sync: false
       # Optional. Only needed if DATABASE_URL still uses user "postgres" against
-      # the Supabase session pooler; the API rewrites it to postgres.<this-ref>.
+      # the Supabase pooler; the API rewrites it to postgres.<this-ref>. A 6543
+      # transaction-pooler URL is rewritten to 5432 (session) on boot.
       - key: SUPABASE_PROJECT_REF
         sync: false
       # Supabase's pooler is signed by its own private CA, which no system trust
