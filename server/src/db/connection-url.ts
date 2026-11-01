@@ -7,9 +7,13 @@ export type DatabaseTarget = {
   rewrittenUser: boolean
 }
 
+export type PasswordSource = 'uri' | 'DATABASE_PASSWORD'
+
 export type NormalizedDatabaseUrl = {
   url: string
   password: string
+  passwordSource: PasswordSource
+  passwordLength: number
   target: DatabaseTarget
 }
 
@@ -30,6 +34,23 @@ function decodeOnce(value: string): string {
   } catch {
     return value
   }
+}
+
+/** Decode %XX sequences without throwing on a literal percent that is not an encoding. */
+function decodePercentSequences(value: string): string {
+  return value.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+}
+
+export function sanitizeSecret(raw?: string): string | undefined {
+  if (raw == null) return undefined
+  let value = raw.replace(/^\uFEFF/, '').replace(/[\r\n]+/g, '').trim()
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    value = value.slice(1, -1).trim()
+  }
+  return value || undefined
 }
 
 function splitHostPort(hostport: string): { host: string; port: string } {
@@ -80,7 +101,7 @@ export function normalizeDatabaseUrl(
 
   const colon = userinfo.indexOf(':')
   let user = decodeOnce(colon === -1 ? userinfo : userinfo.slice(0, colon))
-  const password = decodeOnce(colon === -1 ? '' : userinfo.slice(colon + 1))
+  const password = decodePercentSequences(colon === -1 ? '' : userinfo.slice(colon + 1))
   const { host, port: parsedPort } = splitHostPort(hostport)
   let port = parsedPort
   const database = decodeOnce((pathPart.replace(/^\//, '').split('/')[0] || 'postgres').split('#')[0] ?? 'postgres')
@@ -123,9 +144,17 @@ export function normalizeDatabaseUrl(
     encodedQuery ? `?${encodedQuery}` : ''
   }`
 
+  if (!password) {
+    throw new Error(
+      'DATABASE_URL is missing a password. For Render, set DATABASE_PASSWORD to the raw Database password from Supabase → Settings → Database and keep a placeholder in the URI.',
+    )
+  }
+
   return {
     url,
     password,
+    passwordSource: 'uri',
+    passwordLength: password.length,
     target: { user, host, port, database, pooler, rewrittenUser },
   }
 }
@@ -134,13 +163,36 @@ export function applyPasswordOverride(
   normalized: NormalizedDatabaseUrl,
   override?: string,
 ): NormalizedDatabaseUrl {
-  const next = override?.trim()
-  if (!next || next === normalized.password) return normalized
+  const next = sanitizeSecret(override)
+  if (!next) return { ...normalized, passwordLength: normalized.password.length }
+  if (next === normalized.password) {
+    return { ...normalized, passwordSource: 'DATABASE_PASSWORD', passwordLength: next.length }
+  }
   const { target } = normalized
   const queryIndex = normalized.url.indexOf('?')
   const query = queryIndex === -1 ? '' : normalized.url.slice(queryIndex)
   const url = `postgresql://${encodeURIComponent(target.user)}:${encodeURIComponent(next)}@${target.host}:${target.port}/${target.database}${query}`
-  return { url, password: next, target }
+  return {
+    url,
+    password: next,
+    passwordSource: 'DATABASE_PASSWORD',
+    passwordLength: next.length,
+    target,
+  }
+}
+
+export function resolveDatabaseAuth(
+  normalized: NormalizedDatabaseUrl,
+  override: string | undefined,
+  options: { production: boolean },
+): NormalizedDatabaseUrl {
+  const resolved = applyPasswordOverride(normalized, override)
+  if (options.production && resolved.target.pooler && resolved.passwordSource !== 'DATABASE_PASSWORD') {
+    throw new Error(
+      'DATABASE_PASSWORD is required in production when DATABASE_URL uses the Supabase pooler. In Render, add DATABASE_PASSWORD with the raw Database password from Supabase → Settings → Database (not the account password, not an API key, and not the whole URI). Leave DATABASE_URL as the Session pooler string; the password inside it is ignored once DATABASE_PASSWORD is set.',
+    )
+  }
+  return resolved
 }
 
 export function poolConnectionConfig(input: { password: string; target: DatabaseTarget }) {
@@ -162,7 +214,7 @@ export function explainDatabaseError(error: unknown, target?: DatabaseTarget): E
     const usernameLooksScoped = user.includes('.')
     const poolerHint = target?.pooler
       ? usernameLooksScoped
-        ? ' The pooler username is already postgres.<project-ref>. Postgres rejected the password, not the username. Use the database password from Supabase → Settings → Database (not the account password or an API key). If it contains @ : / # ? % or $, set DATABASE_PASSWORD on Render to the raw password so the URI cannot mangle it.'
+        ? ' The pooler username is already postgres.<project-ref>. Postgres rejected the password. In Render, set DATABASE_PASSWORD to the raw value from Supabase → Settings → Database → Database password (reset it there if unsure). Do not use the account password or an API key. Then redeploy. The pooler can keep the old hash for about 30 seconds after a reset.'
         : ' The session pooler username must be postgres.<project-ref>, not postgres. Copy it from Supabase → Connect → Session pooler (port 5432).'
       : ''
     const encodingHint = usernameLooksScoped

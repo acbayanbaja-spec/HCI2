@@ -2,7 +2,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { config as loadDotenv } from 'dotenv'
 import { z } from 'zod'
-import { applyPasswordOverride, normalizeDatabaseUrl } from '../db/connection-url'
+import { normalizeDatabaseUrl, resolveDatabaseAuth } from '../db/connection-url'
 
 // .env sits next to package.json in both src (tsx) and dist (compiled) layouts.
 loadDotenv({ path: path.resolve(__dirname, '..', '..', '.env'), quiet: true })
@@ -100,6 +100,7 @@ function crossFieldIssues(env: z.infer<typeof envSchema>): EnvIssues {
   // MAIL_FROM is excluded because its display name legitimately uses <angle@brackets>.
   const placeholderKeys = [
     'DATABASE_URL',
+    'DATABASE_PASSWORD',
     'ACCESS_TOKEN_SECRET',
     'REFRESH_TOKEN_SECRET',
     'DATA_ENCRYPTION_KEY',
@@ -139,9 +140,10 @@ function buildEnv() {
   const env = parsed.data
   const isProduction = env.NODE_ENV === 'production'
   const isTest = env.NODE_ENV === 'test'
-  const database = applyPasswordOverride(
+  const database = resolveDatabaseAuth(
     normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF }),
     env.DATABASE_PASSWORD,
+    { production: isProduction },
   )
 
   return {
@@ -154,6 +156,8 @@ function buildEnv() {
     database: {
       url: database.url,
       password: database.password,
+      passwordSource: database.passwordSource,
+      passwordLength: database.passwordLength,
       target: database.target,
       ssl: env.PGSSL,
       poolMax: env.DB_POOL_MAX,

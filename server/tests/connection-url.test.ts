@@ -4,6 +4,8 @@ import {
   explainDatabaseError,
   normalizeDatabaseUrl,
   poolConnectionConfig,
+  resolveDatabaseAuth,
+  sanitizeSecret,
 } from '../src/db/connection-url'
 
 describe('normalizeDatabaseUrl', () => {
@@ -60,7 +62,34 @@ describe('normalizeDatabaseUrl', () => {
       'raw p@ss',
     )
     expect(normalized.password).toBe('raw p@ss')
+    expect(normalized.passwordSource).toBe('DATABASE_PASSWORD')
     expect(poolConnectionConfig(normalized).password).toBe('raw p@ss')
+  })
+
+  it('decodes %XX in the URI without treating a lone percent as encoding', () => {
+    const { password } = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:100%fun%40x@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    )
+    expect(password).toBe('100%fun@x')
+  })
+
+  it('refuses a URI with no password', () => {
+    expect(() =>
+      normalizeDatabaseUrl('postgresql://postgres.abc@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres'),
+    ).toThrow(/missing a password/)
+  })
+
+  it('requires DATABASE_PASSWORD for the production pooler', () => {
+    const normalized = normalizeDatabaseUrl(
+      'postgresql://postgres.abc:secret@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres',
+    )
+    expect(() => resolveDatabaseAuth(normalized, undefined, { production: true })).toThrow(/DATABASE_PASSWORD is required/)
+    expect(resolveDatabaseAuth(normalized, ' secret\n', { production: true }).password).toBe('secret')
+  })
+
+  it('strips quotes and newlines from a pasted secret', () => {
+    expect(sanitizeSecret('"abc"')).toBe('abc')
+    expect(sanitizeSecret('abc\r\n')).toBe('abc')
   })
 
   it('rewrites pooler user postgres when a project ref is supplied', () => {
@@ -101,6 +130,7 @@ describe('explainDatabaseError', () => {
     })
     expect(explained.message).toContain('postgres.abc')
     expect(explained.message).toContain('rejected the password')
+    expect(explained.message).toContain('DATABASE_PASSWORD')
     expect(explained.message).not.toContain('not postgres')
   })
 })

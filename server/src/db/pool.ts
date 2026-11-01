@@ -74,6 +74,8 @@ logger.info('Database target', {
   port: env.database.target.port,
   database: env.database.target.database,
   rewrittenUser: env.database.target.rewrittenUser,
+  passwordSource: env.database.passwordSource,
+  passwordLength: env.database.passwordLength,
 })
 
 export const pool = new Pool({
@@ -130,8 +132,8 @@ function isTransientAuthFailure(error: unknown): boolean {
   return /password authentication failed|circuit breaker open/i.test(message)
 }
 
-/** Supavisor can reject a correct password for a few seconds after a rotation. */
-export async function waitForDatabase(attempts = 4): Promise<void> {
+/** Supavisor can reject a correct password for about 30 seconds after a rotation. */
+export async function waitForDatabase(attempts = env.database.target.pooler ? 8 : 2): Promise<void> {
   let lastError: unknown
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
@@ -140,7 +142,11 @@ export async function waitForDatabase(attempts = 4): Promise<void> {
     } catch (error) {
       lastError = error
       if (!isTransientAuthFailure(error) || attempt === attempts) throw error
-      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt))
+      logger.warn('Database login rejected; retrying in case the pooler still has a cached password', {
+        attempt,
+        of: attempts,
+      })
+      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
     }
   }
   throw lastError

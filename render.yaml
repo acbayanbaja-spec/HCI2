@@ -44,8 +44,8 @@ services:
         value: "587"
       - key: DATABASE_URL
         sync: false
-      # Optional. Raw database password; overrides the password in DATABASE_URL
-      # when hosted dashboards mangle @ : / # ? % or $ inside the URI.
+      # Required for the Supabase pooler. Raw Database password from
+      # Supabase → Settings → Database; not the URI and not the account password.
       - key: DATABASE_PASSWORD
         sync: false
       # Optional. Only needed if DATABASE_URL still uses user "postgres" against
