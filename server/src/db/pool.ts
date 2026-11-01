@@ -67,6 +67,14 @@ function buildSsl() {
   return { rejectUnauthorized: true, ca: pem }
 }
 
+logger.info('Database target', {
+  user: env.database.target.user,
+  host: env.database.target.host,
+  port: env.database.target.port,
+  database: env.database.target.database,
+  rewrittenUser: env.database.target.rewrittenUser,
+})
+
 export const pool = new Pool({
   connectionString: env.database.url,
   max: env.database.poolMax,

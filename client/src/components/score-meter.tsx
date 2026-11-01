@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { cn } from '../lib/cn'
 import type { ScoreBand } from '../lib/api-types'
 import { TONE_CLASSES, bandDescriptor } from '../lib/severity'
@@ -13,7 +14,15 @@ export function ScoreMeter({ score, band, size = 148, className }: { score: numb
   const descriptor = bandDescriptor(band)
   const tone = TONE_CLASSES[descriptor.tone]
   const clamped = Math.min(100, Math.max(0, Math.round(score)))
-  const offset = CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE
+  const [drawn, setDrawn] = useState(false)
+
+  useEffect(() => {
+    setDrawn(false)
+    const frame = requestAnimationFrame(() => setDrawn(true))
+    return () => cancelAnimationFrame(frame)
+  }, [clamped])
+
+  const offset = drawn ? CIRCUMFERENCE - (clamped / 100) * CIRCUMFERENCE : CIRCUMFERENCE
 
   return (
     <div className={cn('flex items-center gap-4', className)}>

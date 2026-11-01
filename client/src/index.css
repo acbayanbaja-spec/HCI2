@@ -95,6 +95,11 @@
   --shadow-pop: 0 12px 40px -12px rgb(16 24 40 / 0.35);
 }
 
+.dark {
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.28), 0 10px 28px -14px rgb(0 0 0 / 0.55);
+  --shadow-pop: 0 16px 40px -16px rgb(0 0 0 / 0.7);
+}
+
 @layer base {
   * {
     border-color: var(--line);
@@ -116,6 +121,16 @@
     font-feature-settings: "cv11", "ss01";
     line-height: 1.55;
     text-rendering: optimizeLegibility;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+    transition-duration: 160ms;
+    transition-timing-function: ease;
   }
 
   /* Every control gets the same visible focus ring - keyboard users should never
@@ -180,10 +195,117 @@
     animation: rise 0.22s ease-out;
   }
 
+  .page-enter {
+    animation: page-enter 0.38s ease both;
+  }
+
+  .auth-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      radial-gradient(920px 420px at -8% -10%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 58%),
+      radial-gradient(640px 280px at 110% 90%, color-mix(in srgb, var(--info) 10%, transparent), transparent 62%),
+      var(--surface);
+  }
+
+  .auth-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(180deg, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.08) 78%);
+    pointer-events: none;
+  }
+
+  .stagger > * {
+    animation: rise 0.42s ease both;
+  }
+
+  .stagger > *:nth-child(1) { animation-delay: 40ms; }
+  .stagger > *:nth-child(2) { animation-delay: 90ms; }
+  .stagger > *:nth-child(3) { animation-delay: 140ms; }
+  .stagger > *:nth-child(4) { animation-delay: 190ms; }
+  .stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .stagger > *:nth-child(6) { animation-delay: 290ms; }
+  .stagger > *:nth-child(7) { animation-delay: 340ms; }
+  .stagger > *:nth-child(8) { animation-delay: 390ms; }
+
+  .card-hover {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  @media (hover: hover) {
+    .card-hover:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-pop);
+    }
+  }
+
+  .toast-enter {
+    animation: toast-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .drawer-enter {
+    animation: drawer-in 0.28s ease both;
+  }
+
+  .dialog-enter {
+    animation: dialog-in 0.28s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  }
+
   @keyframes rise {
     from {
       opacity: 0;
       transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes drawer-in {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.98);
     }
     to {
       opacity: 1;

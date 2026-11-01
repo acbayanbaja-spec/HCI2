@@ -180,7 +180,7 @@ export function LoginPage() {
       ) : null}
 
       {step === 'credentials' ? (
-        <form onSubmit={onSubmitCredentials} className="space-y-4" noValidate>
+        <form onSubmit={onSubmitCredentials} className="stagger space-y-4" noValidate>
           {notice ? <Alert tone="danger" title="We could not sign you in" Icon={ShieldCheck}>{notice}</Alert> : null}
 
           <TextField
@@ -226,7 +226,7 @@ export function LoginPage() {
           </p>
         </form>
       ) : (
-        <form onSubmit={onSubmitCode} className="space-y-4" noValidate>
+        <form onSubmit={onSubmitCode} className="stagger space-y-4" noValidate>
           {notice ? <Alert tone="danger" title="That did not verify" Icon={ShieldCheck}>{notice}</Alert> : null}
 
           <TextField

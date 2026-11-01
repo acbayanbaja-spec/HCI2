@@ -36,7 +36,7 @@ const NAV = [
 
 function navItemClasses(isActive: boolean) {
   return cn(
-    'flex items-center gap-3 rounded-[var(--radius-field)] px-3 py-2.5 text-sm font-medium transition',
+    'flex items-center gap-3 rounded-[var(--radius-field)] px-3 py-2.5 text-sm font-medium',
     isActive ? 'bg-brand-soft text-ink shadow-[inset_2px_0_0_var(--brand)]' : 'text-muted hover:bg-sunken hover:text-ink',
   )
 }
@@ -241,7 +241,7 @@ export function AppShell() {
         Skip to main content
       </a>
 
-      <aside className="hidden border-r border-line bg-surface/60 px-4 py-5 lg:flex lg:flex-col">
+      <aside className="hidden border-r border-line bg-surface/80 px-4 py-5 lg:flex lg:flex-col">
         <div className="px-1">
           <Brand />
         </div>
@@ -283,7 +283,7 @@ export function AppShell() {
         {drawer ? (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/55" onClick={() => setDrawer(false)} aria-hidden="true" />
-            <div role="dialog" aria-modal="true" aria-label="Site navigation" className="animate-rise absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-surface p-4">
+            <div role="dialog" aria-modal="true" aria-label="Site navigation" className="drawer-enter absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-surface p-4 shadow-[var(--shadow-pop)]">
               <div className="flex items-center justify-between">
                 <Brand />
                 <button
@@ -303,7 +303,9 @@ export function AppShell() {
         ) : null}
 
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <Outlet />
+          <div key={location.pathname} className="page-enter">
+            <Outlet />
+          </div>
         </main>
 
         <footer className="border-t border-line px-4 py-5 text-xs text-faint sm:px-6 lg:px-8">

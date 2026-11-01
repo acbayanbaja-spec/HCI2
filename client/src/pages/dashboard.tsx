@@ -59,7 +59,7 @@ export function DashboardPage() {
       ) : error ? (
         <ErrorState message={error.message} onRetry={reload} title="Your dashboard could not be loaded" />
       ) : data ? (
-        <div className="space-y-5">
+        <div className="stagger space-y-5">
           <Card aria-label="Digital Safety Score">
             <CardBody className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
               <ScoreMeter score={data.score.score} band={data.score.band} />

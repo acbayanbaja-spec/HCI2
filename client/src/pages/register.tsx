@@ -114,7 +114,7 @@ export function RegisterPage() {
         </p>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form onSubmit={onSubmit} className="stagger space-y-4" noValidate>
         {formError ? <Alert tone="danger" title="The account was not created" Icon={ShieldCheck}>{formError}</Alert> : null}
 
         <TextField

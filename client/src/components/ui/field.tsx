@@ -3,8 +3,8 @@ import { useId, useState, type InputHTMLAttributes, type ReactNode, type Ref, ty
 import { cn } from '../../lib/cn'
 
 const CONTROL =
-  'w-full rounded-[var(--radius-field)] border bg-surface px-3 py-2 text-sm text-ink placeholder:text-faint transition ' +
-  'border-line-strong hover:border-brand/60 focus:border-brand disabled:opacity-60'
+  'w-full rounded-[var(--radius-field)] border bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-faint ' +
+  'border-line-strong hover:border-brand/55 focus:border-brand focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_18%,transparent)] disabled:opacity-60'
 
 type ShellProps = {
   label: string

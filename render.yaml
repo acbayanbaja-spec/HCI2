@@ -44,6 +44,10 @@ services:
         value: "587"
       - key: DATABASE_URL
         sync: false
+      # Optional. Only needed if DATABASE_URL still uses user "postgres" against
+      # the Supabase session pooler; the API rewrites it to postgres.<this-ref>.
+      - key: SUPABASE_PROJECT_REF
+        sync: false
       # Supabase's pooler is signed by its own private CA, which no system trust
       # store carries. The certificate is committed, so this names the file.
       - key: PGSSL_ROOT_CERT

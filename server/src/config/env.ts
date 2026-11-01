@@ -2,6 +2,7 @@ import path from 'node:path'
 import crypto from 'node:crypto'
 import { config as loadDotenv } from 'dotenv'
 import { z } from 'zod'
+import { normalizeDatabaseUrl } from '../db/connection-url'
 
 // .env sits next to package.json in both src (tsx) and dist (compiled) layouts.
 loadDotenv({ path: path.resolve(__dirname, '..', '..', '.env'), quiet: true })
@@ -25,6 +26,13 @@ const envSchema = z.object({
   CORS_ORIGINS: csvList.default(['http://localhost:5173']),
 
   DATABASE_URL: z.string().min(12, 'DATABASE_URL is required'),
+  SUPABASE_PROJECT_REF: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const trimmed = value?.trim()
+      return trimmed ? trimmed : undefined
+    }),
   PGSSL: booleanish.default(false),
   DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(10),
   DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
@@ -130,6 +138,7 @@ function buildEnv() {
   const env = parsed.data
   const isProduction = env.NODE_ENV === 'production'
   const isTest = env.NODE_ENV === 'test'
+  const database = normalizeDatabaseUrl(env.DATABASE_URL, { projectRef: env.SUPABASE_PROJECT_REF })
 
   return {
     nodeEnv: env.NODE_ENV,
@@ -139,7 +148,8 @@ function buildEnv() {
     corsOrigins: env.CORS_ORIGINS,
     clientUrl: env.APP_CLIENT_URL,
     database: {
-      url: env.DATABASE_URL,
+      url: database.url,
+      target: database.target,
       ssl: env.PGSSL,
       poolMax: env.DB_POOL_MAX,
       statementTimeoutMs: env.DB_STATEMENT_TIMEOUT_MS,

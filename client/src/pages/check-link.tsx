@@ -142,7 +142,7 @@ export function CheckLinkPage() {
           <Card>
             <CardHeader title="What are you unsure about?" icon={<ScanSearch className="size-4" />} />
             <CardBody>
-              <form onSubmit={analyze} className="space-y-4" noValidate>
+              <form onSubmit={analyze} className="stagger space-y-4" noValidate>
                 <SelectField label="Type" value={kind} options={KIND_OPTIONS} onChange={(event) => setKind(event.target.value as AnalysisKind)} />
 
                 {kind === 'url' ? (

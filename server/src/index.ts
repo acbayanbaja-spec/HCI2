@@ -1,6 +1,7 @@
 import { createApp } from './app'
 import { env } from './config/env'
 import { logger } from './lib/logger'
+import { explainDatabaseError } from './db/connection-url'
 import { assertMigrationsCurrent } from './db/migrate'
 import { closePool } from './db/pool'
 import { purgeExpiredSessions } from './services/session.service'
@@ -49,7 +50,7 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  logger.error('API could not start', { error })
+  logger.error('API could not start', { error: explainDatabaseError(error, env.database.target) })
   await closePool().catch(() => undefined)
   process.exitCode = 1
 })

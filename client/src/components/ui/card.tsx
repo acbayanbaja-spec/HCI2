@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 
 export function Card({ className, children, as: Tag = 'section' }: { className?: string; children: ReactNode; as?: 'div' | 'section' | 'article' | 'li' }) {
   return (
-    <Tag className={cn('rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]', className)}>{children}</Tag>
+    <Tag className={cn('card-hover rounded-[var(--radius-card)] border border-line bg-surface shadow-[var(--shadow-card)]', className)}>{children}</Tag>
   )
 }
 
@@ -49,7 +49,7 @@ export function CardFooter({ className, children }: { className?: string; childr
 /** Page-level heading: the h1 every route needs for landmarks and screen readers. */
 export function PageHeader({ title, description, actions }: { title: string; description?: ReactNode; actions?: ReactNode }) {
   return (
-    <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <header className="page-enter mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="max-w-2xl">
         <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[1.7rem]">{title}</h1>
         {description ? <p className="mt-1.5 text-sm text-muted">{description}</p> : null}

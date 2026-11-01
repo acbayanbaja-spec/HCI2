@@ -84,7 +84,7 @@ export function ForgotPasswordPage() {
           </div>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+        <form onSubmit={onSubmit} className="stagger space-y-4" noValidate>
           {error ? <Alert tone="danger" title="The request failed" Icon={ShieldCheck}>{error}</Alert> : null}
 
           <TextField

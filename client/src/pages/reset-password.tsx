@@ -109,7 +109,7 @@ export function ResetPasswordPage() {
         </p>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form onSubmit={onSubmit} className="stagger space-y-4" noValidate>
         {error ? <Alert tone="danger" title="The password was not changed" Icon={ShieldCheck}>{error}</Alert> : null}
 
         <PasswordField

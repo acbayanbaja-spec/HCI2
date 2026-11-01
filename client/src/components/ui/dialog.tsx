@@ -77,7 +77,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
         aria-labelledby={labelId}
         tabIndex={-1}
         className={cn(
-          'animate-rise relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[18px] border border-line bg-surface shadow-[var(--shadow-pop)] sm:rounded-[var(--radius-card)]',
+          'dialog-enter relative z-10 flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[18px] border border-line bg-surface shadow-[var(--shadow-pop)] sm:rounded-[var(--radius-card)]',
           size === 'lg' ? 'sm:max-w-3xl' : 'sm:max-w-lg',
         )}
       >
